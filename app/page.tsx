@@ -1,5 +1,9 @@
-import Image from "next/image"
+import { Button } from "./_components/ui/button"
 
 export default function Home() {
-  return <h1 className="mb-0 text-emerald-950">Home</h1>
+  return (
+    <>
+      <Button>Text</Button>
+    </>
+  )
 }
