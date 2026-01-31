@@ -20,6 +20,8 @@ import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { addDays, format, set } from "date-fns"
 import getBookings from "../actions/get-bookings"
+import { Dialog, DialogContent } from "./ui/dialog"
+import { SignInDialog } from "./sign-in-dialog"
 
 interface ServiceItemProps {
   service: BarbershopService
@@ -68,11 +70,13 @@ const getTimeList = (booking: Booking[]) => {
 }
 
 const ServiceItem = ({ service, barbershop }: ServiceItemProps) => {
-  const [selectDay, setSelectDay] = useState<Date | undefined>(undefined)
+  const [singInDialogIsOpen, setSignInDialogIsOpen] = useState(false)
+
   const { data } = useSession()
 
+  const [selectDay, setSelectDay] = useState<Date | undefined>(undefined)
+  const [selectTime, setSelectTime] = useState<string | undefined>(undefined)
   const [dayBooking, setDayBooking] = useState<Booking[] | undefined>(undefined)
-
   const [bookingSheetIsOpen, setbookingSheetIsOpen] = useState(false)
 
   useEffect(() => {
@@ -87,21 +91,26 @@ const ServiceItem = ({ service, barbershop }: ServiceItemProps) => {
     fetch()
   }, [selectDay, service.id])
 
-  const handleBookingSheetOpenChange = () => {
-    setSelectDay(undefined)
-    setSelectTime(undefined)
-    setDayBooking([])
-    setbookingSheetIsOpen(false)
+  const handleBookingClick = () => {
+    if (data?.user) {
+      return setbookingSheetIsOpen(true)
+    }
+    return setSignInDialogIsOpen(true)
   }
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectDay(date)
   }
 
-  const [selectTime, setSelectTime] = useState<string | undefined>(undefined)
-
   const handleTimeSelect = (time: string) => {
     setSelectTime(time)
+  }
+
+  const handleBookingSheetOpenChange = () => {
+    setSelectDay(undefined)
+    setSelectTime(undefined)
+    setDayBooking([])
+    setbookingSheetIsOpen(false)
   }
 
   const handleCreateBooking = async () => {
@@ -129,161 +138,171 @@ const ServiceItem = ({ service, barbershop }: ServiceItemProps) => {
   }
 
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-3">
-        {/* IMAGE */}
-        <div className="relative max-h-[110px] min-h-[110px] min-w-[110px] max-w-[110px]">
-          <Image
-            src={service.imageUrl}
-            className="rounded-lg object-cover"
-            fill
-            alt={service.name}
-          />
-        </div>
-
-        {/* DIREITA */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{service.name}</h3>
-          <p className="text-sm text-gray-400">{service.description}</p>
-
-          {/* PREÇO E BOTÃO */}
-          <div className="flex items-center">
-            <p className="text-sm font-bold text-primary">
-              {Intl.NumberFormat("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              }).format(Number(service.price))}
-            </p>
-
-            <Sheet
-              open={bookingSheetIsOpen}
-              onOpenChange={handleBookingSheetOpenChange}
-            >
-              <Button
-                variant="secondary"
-                size="sm"
-                className="ml-40"
-                onClick={() => setbookingSheetIsOpen(true)}
-              >
-                Reservar
-              </Button>
-
-              <SheetContent className="overflow-y-auto [&::-webkit-scrollbar]:hidden">
-                <SheetHeader>
-                  <SheetTitle>Fazer Reserva</SheetTitle>
-                </SheetHeader>
-
-                <div className="border-b border-solid py-5">
-                  <Calendar
-                    mode="single"
-                    locale={ptBR}
-                    selected={selectDay}
-                    onSelect={handleDateSelect}
-                    hidden={{ before: addDays(new Date(), 0) }}
-                    className="w-full"
-                    styles={{
-                      months: {
-                        width: "100%",
-                      },
-                      month: {
-                        width: "100%",
-                      },
-                      table: {
-                        width: "100%",
-                        maxWidth: "100%",
-                      },
-                      head_cell: {
-                        width: "100%",
-                        textTransform: "capitalize",
-                      },
-                      cell: {
-                        width: "100%",
-                      },
-                      button: {
-                        width: "100%",
-                      },
-                      nav_button_previous: {
-                        width: "32px",
-                        height: "32px",
-                      },
-                      nav_button_next: {
-                        width: "32px",
-                        height: "32px",
-                      },
-                      caption: {
-                        textTransform: "capitalize",
-                      },
-                    }}
-                  />
-                </div>
-
-                {selectDay && (
-                  <div className="flex gap-3 overflow-x-auto border-b border-solid p-5 [&::-webkit-scrollbar]:hidden">
-                    {getTimeList(dayBooking || []).map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectTime === time ? "default" : "outline"}
-                        className="rounded-full"
-                        onClick={() => handleTimeSelect(time)}
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
-                )}
-
-                {selectTime && selectDay && (
-                  <div className="p-5">
-                    <Card className="p-5">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <h2 className="font-bold">{service.name}</h2>
-                          <p className="text-sm font-bold">
-                            {Intl.NumberFormat("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            }).format(Number(service.price))}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <h2 className="text-sm text-gray-400">Data</h2>
-                          <p className="text-sm">
-                            {format(selectDay, "d 'de' MMMM", { locale: ptBR })}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <h2 className="text-sm text-gray-400">Horário</h2>
-                          <p className="text-sm">{selectTime}</p>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <h2 className="text-sm text-gray-400">Barbearia</h2>
-                          <p className="text-sm">{barbershop.name}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                <SheetFooter className="mt-5 px-5">
-                  <SheetClose asChild>
-                    <Button
-                      type="submit"
-                      onClick={handleCreateBooking}
-                      disabled={!selectDay || !selectTime}
-                    >
-                      Confirmar
-                    </Button>
-                  </SheetClose>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
+    <>
+      <Card>
+        <CardContent className="flex items-center gap-3 p-3">
+          <div className="relative max-h-[110px] min-h-[110px] min-w-[110px] max-w-[110px]">
+            <Image
+              src={service.imageUrl}
+              className="rounded-lg object-cover"
+              fill
+              alt={service.name}
+            />
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold">{service.name}</h3>
+            <p className="text-sm text-gray-400">{service.description}</p>
+
+            <div className="flex items-center">
+              <p className="text-sm font-bold text-primary">
+                {Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(Number(service.price))}
+              </p>
+
+              <Sheet
+                open={bookingSheetIsOpen}
+                onOpenChange={handleBookingSheetOpenChange}
+              >
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="ml-40"
+                  onClick={handleBookingClick}
+                >
+                  Reservar
+                </Button>
+
+                <SheetContent className="overflow-y-auto [&::-webkit-scrollbar]:hidden">
+                  <SheetHeader>
+                    <SheetTitle>Fazer Reserva</SheetTitle>
+                  </SheetHeader>
+
+                  <div className="border-b border-solid py-5">
+                    <Calendar
+                      mode="single"
+                      locale={ptBR}
+                      selected={selectDay}
+                      onSelect={handleDateSelect}
+                      disabled={{ before: addDays(new Date(), 0) }}
+                      className="w-full"
+                      styles={{
+                        months: {
+                          width: "100%",
+                        },
+                        month: {
+                          width: "100%",
+                        },
+                        table: {
+                          width: "100%",
+                          maxWidth: "100%",
+                        },
+                        head_cell: {
+                          width: "100%",
+                          textTransform: "capitalize",
+                        },
+                        cell: {
+                          width: "100%",
+                        },
+                        button: {
+                          width: "100%",
+                        },
+                        nav_button_previous: {
+                          width: "32px",
+                          height: "32px",
+                        },
+                        nav_button_next: {
+                          width: "32px",
+                          height: "32px",
+                        },
+                        caption: {
+                          textTransform: "capitalize",
+                        },
+                      }}
+                    />
+                  </div>
+
+                  {selectDay && (
+                    <div className="flex gap-3 overflow-x-auto border-b border-solid p-5 [&::-webkit-scrollbar]:hidden">
+                      {getTimeList(dayBooking || []).map((time) => (
+                        <Button
+                          key={time}
+                          variant={selectTime === time ? "default" : "outline"}
+                          className="rounded-full"
+                          onClick={() => handleTimeSelect(time)}
+                        >
+                          {time}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectTime && selectDay && (
+                    <div className="p-5">
+                      <Card className="p-5">
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between">
+                            <h2 className="font-bold">{service.name}</h2>
+                            <p className="text-sm font-bold">
+                              {Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              }).format(Number(service.price))}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-sm text-gray-400">Data</h2>
+                            <p className="text-sm">
+                              {format(selectDay, "d 'de' MMMM", {
+                                locale: ptBR,
+                              })}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-sm text-gray-400">Horário</h2>
+                            <p className="text-sm">{selectTime}</p>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-sm text-gray-400">Barbearia</h2>
+                            <p className="text-sm">{barbershop.name}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  <SheetFooter className="mt-5 px-5">
+                    <SheetClose asChild>
+                      <Button
+                        type="submit"
+                        onClick={handleCreateBooking}
+                        disabled={!selectDay || !selectTime}
+                      >
+                        Confirmar
+                      </Button>
+                    </SheetClose>
+                  </SheetFooter>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={singInDialogIsOpen}
+        onOpenChange={(open) => setSignInDialogIsOpen(open)}
+      >
+        <DialogContent className="w-[90%]">
+          <SignInDialog />
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
