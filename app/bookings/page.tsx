@@ -10,6 +10,7 @@ const Bookings = async () => {
   if (!session?.user) {
     return notFound()
   }
+
   const confirmedBooking = await db.booking.findMany({
     where: {
       userId: (session.user as any).id,
@@ -51,6 +52,9 @@ const Bookings = async () => {
 
       <div className="space-y-3 p-5">
         <h1 className="text-xl font-bold">Agendamentos</h1>
+        {confirmedBooking.length === 0 && concludedBooking.length === 0 && (
+          <p className="text-gray-400">Você não possui agendamentos.</p>
+        )}
 
         {confirmedBooking.length > 0 && (
           <>
