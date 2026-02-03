@@ -1,9 +1,10 @@
 import { getServerSession } from "next-auth"
 import Header from "../_components/header"
-import { db } from "../_lib/prisma"
 import authOptions from "../_lib/auth"
 import { notFound } from "next/navigation"
 import BookingItem from "../_components/booking-item"
+import { getConfirmedBookings } from "../_data/get-confirmed-bookings"
+import { getConcludedBookings } from "../_data/get-concluded-bookings"
 
 const Bookings = async () => {
   const session = await getServerSession(authOptions)
@@ -11,40 +12,9 @@ const Bookings = async () => {
     return notFound()
   }
 
-  const confirmedBooking = await db.booking.findMany({
-    where: {
-      userId: (session.user as any).id,
-      date: {
-        gte: new Date(),
-      },
-    },
-    include: {
-      service: {
-        include: {
-          barbershop: true,
-        },
-      },
-    },
-    orderBy: {
-      date: "asc",
-    },
-  })
+  const confirmedBooking = getConfirmedBookings()
 
-  const concludedBooking = await db.booking.findMany({
-    where: {
-      userId: (session.user as any).id,
-      date: {
-        lt: new Date(),
-      },
-    },
-    include: {
-      service: {
-        include: {
-          barbershop: true,
-        },
-      },
-    },
-  })
+  const concludedBooking = getConcludedBookings()
 
   return (
     <>
@@ -52,27 +22,28 @@ const Bookings = async () => {
 
       <div className="space-y-3 p-5">
         <h1 className="text-xl font-bold">Agendamentos</h1>
-        {confirmedBooking.length === 0 && concludedBooking.length === 0 && (
-          <p className="text-gray-400">Você não possui agendamentos.</p>
-        )}
+        {(await confirmedBooking).length === 0 &&
+          (await concludedBooking).length === 0 && (
+            <p className="text-gray-400">Você não possui agendamentos.</p>
+          )}
 
-        {confirmedBooking.length > 0 && (
+        {(await confirmedBooking).length > 0 && (
           <>
             <h2 className="mb-3 mt-6 text-xs font-bold uppercase text-gray-400">
               Confirmados
             </h2>
-            {confirmedBooking.map((booking) => (
+            {(await confirmedBooking).map((booking) => (
               <BookingItem key={booking.id} booking={booking} />
             ))}
           </>
         )}
 
-        {concludedBooking.length > 0 && (
+        {(await concludedBooking).length > 0 && (
           <>
             <h2 className="mb-3 mt-6 text-xs font-bold uppercase text-gray-400">
               Finalizados
             </h2>
-            {concludedBooking.map((booking) => (
+            {(await concludedBooking).map((booking) => (
               <BookingItem key={booking.id} booking={booking} />
             ))}
           </>
